@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/shanling2016/requests"
+	"github.com/shanling2016/requests/url"
 	http "github.com/wangluozhe/chttp"
-	"github.com/wangluozhe/requests"
-	"github.com/wangluozhe/requests/url"
 )
 
 func main() {

@@ -1,10 +1,10 @@
 package url
 
 import (
+	ja3 "github.com/shanling2016/requests/transport"
 	"github.com/wangluozhe/chttp"
 	"github.com/wangluozhe/chttp/cookiejar"
 	"github.com/wangluozhe/chttp/http2"
-	ja3 "github.com/wangluozhe/requests/transport"
 	"time"
 )
 

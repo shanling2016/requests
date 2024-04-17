@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/shanling2016/requests/transport"
 	http "github.com/wangluozhe/chttp"
-	"github.com/wangluozhe/requests/transport"
 	"io"
 	"log"
 	"strings"
