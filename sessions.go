@@ -189,6 +189,7 @@ type Session struct {
 	transport     *http.Transport
 	request       *http.Request
 	client        *http.Client
+	changeJa3     bool
 }
 
 // 预请求处理
@@ -312,45 +313,48 @@ func (s *Session) Send(preq *models.PrepareRequest, req *url.Request) (*models.R
 	} else {
 		s.transport.Proxy = nil
 	}
-
-	// 设置JA3指纹信息
-	ja3String := merge_setting(s.Ja3, req.Ja3).(string)
-	if ja3String != "" && strings.HasPrefix(preq.Url, "https") {
-		browser := ja3.Browser{
-			JA3:       ja3String,
-			UserAgent: s.Headers.Get("User-Agent"),
-		}
-
-		// 自定义TLS指纹信息
-		tlsExtensions := merge_setting(req.TLSExtensions, s.TLSExtensions).(*ja3.TLSExtensions)
-		http2Settings := merge_setting(req.HTTP2Settings, s.HTTP2Settings).(*http2.HTTP2Settings)
-		if strings.Index(strings.Split(browser.JA3, ",")[2], "-41") != -1 {
-			config := s.transport.TLSClientConfig.Clone()
-			if config.ClientSessionCache == nil {
-				config.SessionTicketKey = [32]byte{}
-				config.OmitEmptyPsk = true
-				config.ClientSessionCache = utls.NewLRUClientSessionCache(0)
-				s.transport.TLSClientConfig = config
+	// 判断是否更新JA3指纹
+	if req.Ja3 != "" || !s.changeJa3 {
+		// 设置JA3指纹信息
+		ja3String := merge_setting(s.Ja3, req.Ja3).(string)
+		if ja3String != "" && strings.HasPrefix(preq.Url, "https") {
+			browser := ja3.Browser{
+				JA3:       ja3String,
+				UserAgent: s.Headers.Get("User-Agent"),
 			}
-		}
 
-		options := &ja3.Options{
-			Browser:       browser,
-			TLSExtensions: tlsExtensions,
-			HTTP2Settings: http2Settings,
-			ForceHTTP1:    req.ForceHTTP1,
-			TLSConfig:     s.transport.TLSClientConfig,
-		}
+			// 自定义TLS指纹信息
+			tlsExtensions := merge_setting(req.TLSExtensions, s.TLSExtensions).(*ja3.TLSExtensions)
+			http2Settings := merge_setting(req.HTTP2Settings, s.HTTP2Settings).(*http2.HTTP2Settings)
+			if strings.Index(strings.Split(browser.JA3, ",")[2], "-41") != -1 {
+				config := s.transport.TLSClientConfig.Clone()
+				if config.ClientSessionCache == nil {
+					config.SessionTicketKey = [32]byte{}
+					config.OmitEmptyPsk = true
+					config.ClientSessionCache = utls.NewLRUClientSessionCache(0)
+					s.transport.TLSClientConfig = config
+				}
+			}
 
-		if proxies != "" {
-			options.Proxy = proxies
-		}
+			options := &ja3.Options{
+				Browser:       browser,
+				TLSExtensions: tlsExtensions,
+				HTTP2Settings: http2Settings,
+				ForceHTTP1:    req.ForceHTTP1,
+				TLSConfig:     s.transport.TLSClientConfig,
+			}
 
-		client, err := ja3.NewClient(options)
-		if err != nil {
-			return nil, err
+			if proxies != "" {
+				options.Proxy = proxies
+			}
+
+			client, err := ja3.NewClient(options)
+			if err != nil {
+				return nil, err
+			}
+			s.client = &client
+			s.changeJa3 = true
 		}
-		s.client = &client
 	}
 
 	// 是否验证证书
